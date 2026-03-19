@@ -13,7 +13,7 @@
         "src/tools/sites.ts"
     ],
     "out": "docs-site",
-    "name": "Google Search Console MCP Server API",
+    "name": "Google Search Console CLI API",
     "includeVersion": true,
     "plugin": [],
     "exclude": [

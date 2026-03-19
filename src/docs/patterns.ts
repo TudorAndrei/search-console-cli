@@ -1,7 +1,7 @@
 /**
  * Google Search Console - Common Patterns & Recipes
  * 
- * This documentation is exposed as an MCP resource for AI agents.
+ * This documentation is exposed for CLI and agent workflows.
  */
 
 export const patternsDocs = `# Google Search Console - Common Patterns & Recipes

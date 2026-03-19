@@ -19,7 +19,7 @@ Runs a full PageSpeed Insights analysis, returning Lighthouse scores and Core We
 
 ## Combining the Tools
 
-The power of this MCP is the ability to combine these. An agent can:
+The power of this toolkit is the ability to combine these. An agent can:
 1.  Notice a traffic drop on a specific page using **Analytics**.
 2.  Check if it's still indexed using **Inspection**.
 3.  Check if a recent code change slowed it down using **PageSpeed**.

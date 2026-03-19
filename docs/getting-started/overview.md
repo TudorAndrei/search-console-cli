@@ -1,9 +1,9 @@
 ---
 title: "Overview"
-description: "What is search-console-mcp?"
+description: "What is search-console-cli?"
 ---
 
-**search-console-mcp** is an open-source implementation of the [Model Context Protocol](https://modelcontextprotocol.io) that gives AI agents direct, structured access to Google Search Console (GSC).
+**search-console-cli** is an open-source Bun command line application that gives AI agents and developers direct, structured access to Google Search Console (GSC).
 
 Unlike simple API wrappers, this project focuses on providing **SEO Intelligence Tools**. Instead of just asking an agent to "look at my data," you can give it tools to "find quick wins" or "detect traffic anomalies."
 
@@ -25,12 +25,8 @@ Working with SEO data in LLMs usually involves:
 
 ## The Solution
 
-With this MCP server, the agent has a "toolbox." When you ask "Why did my traffic drop?", the agent doesn't guess. It calls `analytics_time_series` to check for anomalies, `inspect_url` to see if pages were de-indexed, and `seo_insights` to check for ranking shifts.
+With this CLI, the agent has a "toolbox." When you ask "Why did my traffic drop?", the agent doesn't guess. It calls `analytics_time_series` to check for anomalies, `inspect_url` to see if pages were de-indexed, and `seo_insights` to check for ranking shifts.
 
-## Supported Clients
+## Supported Environments
 
-This server works with any MCP-compatible client, including:
-*   [Claude Desktop](https://claude.ai/download)
-*   [Cursor](https://cursor.com)
-*   [LibreChat](https://librechat.ai)
-*   Custom agent implementations using the MCP SDK.
+This CLI works directly in your terminal and can be orchestrated by coding agents and scripts.

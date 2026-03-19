@@ -1,9 +1,9 @@
 /**
- * Error handling utilities for the MCP server
+ * Error handling utilities for the CLI
  */
 
 /**
- * Formats an error into an MCP-compatible response
+ * Formats an error into a structured response
  */
 export function formatError(error: unknown): {
     content: Array<{ type: "text"; text: string }>;

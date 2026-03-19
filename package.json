@@ -1,13 +1,12 @@
 {
-  "name": "search-console-mcp",
+  "name": "search-console-cli",
   "version": "1.9.2",
-  "mcpName": "io.github.saurabhsharma2u/search-console-mcp",
-  "description": "MCP server for Google Search Console API",
+  "description": "Bun CLI for Google Search Console API",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "search-console-mcp": "./dist/index.js",
-    "search-console-mcp-setup": "./dist/setup.js"
+    "search-console": "./dist/index.js",
+    "search-console-setup": "./dist/setup.js"
   },
   "files": [
     "dist",
@@ -15,23 +14,27 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
+    "build": "bunx tsc",
+    "test": "bunx vitest run",
+    "typecheck": "bunx tsc --noEmit",
     "docs": "typedoc",
-    "deploy:registry": "mcp-publisher publish",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "mcp",
+    "cli",
     "bing-search",
     "google-search-console",
     "seo"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TudorAndrei/search-console-cli.git"
+  },
+  "repoSlug": "TudorAndrei/search-console-cli",
   "dependencies": {
     "@adobe/structured-data-validator": "^1.6.0",
-    "@modelcontextprotocol/sdk": "^1.26.0",
     "cheerio": "^1.2.0",
     "dotenv": "^17.2.3",
     "googleapis": "^171.0.0",

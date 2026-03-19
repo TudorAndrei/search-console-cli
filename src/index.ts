@@ -1,6 +1,4 @@
-#!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+#!/usr/bin/env bun
 import { z } from "zod";
 import * as sites from "./tools/sites.js";
 import * as sitemaps from "./tools/sitemaps.js";
@@ -11,1012 +9,541 @@ import * as seoInsights from "./tools/seo-insights.js";
 import * as seoPrimitives from "./tools/seo-primitives.js";
 import * as schemaValidator from "./tools/schema-validator.js";
 import * as advancedAnalytics from "./tools/advanced-analytics.js";
-import { formatError } from "./errors.js";
+import { starRepository } from "./tools/support.js";
 
-const server = new McpServer({
-  name: "search-console-mcp",
-  version: "1.0.0",
-});
+type CommandHandler = (args: Record<string, unknown>) => Promise<unknown> | unknown;
 
-// Sites Tools
-server.tool(
-  "sites_list",
-  "List all sites in Search Console",
-  {},
-  async () => {
-    try {
-      const result = await sites.listSites();
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
+interface CommandDefinition {
+  description: string;
+  schema: z.ZodObject<any>;
+  run: CommandHandler;
+}
 
-server.tool(
-  "sites_add",
-  "Add a website to Search Console",
-  { siteUrl: z.string().describe("The URL of the site to add (e.g., 'https://example.com' or 'sc-domain:example.com')") },
-  async ({ siteUrl }) => {
-    try {
-      const result = await sites.addSite(siteUrl);
-      return {
-        content: [{ type: "text", text: result }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "sites_delete",
-  "Remove a website from Search Console",
-  { siteUrl: z.string().describe("The URL of the site to delete") },
-  async ({ siteUrl }) => {
-    try {
-      const result = await sites.deleteSite(siteUrl);
-      return {
-        content: [{ type: "text", text: result }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "sites_get",
-  "Get information about a specific site",
-  { siteUrl: z.string().describe("The URL of the site") },
-  async ({ siteUrl }) => {
-    try {
-      const result = await sites.getSite(siteUrl);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-// Sitemaps Tools
-server.tool(
-  "sitemaps_list",
-  "List sitemaps for a site",
-  { siteUrl: z.string().describe("The URL of the site") },
-  async ({ siteUrl }) => {
-    try {
-      const result = await sitemaps.listSitemaps(siteUrl);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "sitemaps_get",
-  "Get details about a specific sitemap",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    feedpath: z.string().describe("The URL of the sitemap")
+const commands: Record<string, CommandDefinition> = {
+  sites_list: {
+    description: "List all sites in Search Console",
+    schema: z.object({}),
+    run: async () => sites.listSites(),
   },
-  async ({ siteUrl, feedpath }) => {
-    try {
-      const result = await sitemaps.getSitemap(siteUrl, feedpath);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "sitemaps_submit",
-  "Submit a sitemap",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    feedpath: z.string().describe("The URL of the sitemap")
+  sites_add: {
+    description: "Add a website to Search Console",
+    schema: z.object({ siteUrl: z.string() }),
+    run: async ({ siteUrl }) => sites.addSite(siteUrl as string),
   },
-  async ({ siteUrl, feedpath }) => {
-    try {
-      const result = await sitemaps.submitSitemap(siteUrl, feedpath);
-      return {
-        content: [{ type: "text", text: result }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "sitemaps_delete",
-  "Delete a sitemap",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    feedpath: z.string().describe("The URL of the sitemap")
+  sites_delete: {
+    description: "Remove a website from Search Console",
+    schema: z.object({ siteUrl: z.string() }),
+    run: async ({ siteUrl }) => sites.deleteSite(siteUrl as string),
   },
-  async ({ siteUrl, feedpath }) => {
-    try {
-      const result = await sitemaps.deleteSitemap(siteUrl, feedpath);
-      return {
-        content: [{ type: "text", text: result }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-// Analytics Tools
-server.tool(
-  "analytics_query",
-  "Query search analytics data with optional pagination",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    startDate: z.string().describe("Start date (YYYY-MM-DD)"),
-    endDate: z.string().describe("End date (YYYY-MM-DD)"),
-    dimensions: z.array(z.string()).optional().describe("Dimensions to group by (date, query, page, country, device, searchAppearance)"),
-    type: z.enum(["web", "image", "video", "news", "discover", "googleNews"]).optional().describe("Search type (default: web)"),
-    aggregationType: z.enum(["auto", "byProperty", "byPage"]).optional().describe("How to aggregate data (default: auto)"),
-    dataState: z.enum(["final", "all"]).optional().describe("Include fresh data? 'all' includes fresh (preliminary) data (default: final)"),
-    limit: z.number().optional().describe("Max rows to return (default: 1000)"),
-    startRow: z.number().optional().describe("Starting row for pagination (0-based)"),
-    filters: z.array(z.object({
-      dimension: z.string(),
-      operator: z.string(),
-      expression: z.string()
-    })).optional().describe("Filters (dimension: query/page/country/device, operator: equals/contains/notContains/includingRegex/excludingRegex)")
+  sites_get: {
+    description: "Get information about a specific site",
+    schema: z.object({ siteUrl: z.string() }),
+    run: async ({ siteUrl }) => sites.getSite(siteUrl as string),
   },
-  async (args) => {
-    try {
-      const result = await analytics.queryAnalytics(args);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_performance_summary",
-  "Get the aggregate performance metrics (clicks, impressions, CTR, position) for the last N days. Defaults to 28 days. Note: Data is typically delayed by 2-3 days.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 28)")
+  sitemaps_list: {
+    description: "List sitemaps for a site",
+    schema: z.object({ siteUrl: z.string() }),
+    run: async ({ siteUrl }) => sitemaps.listSitemaps(siteUrl as string),
   },
-  async ({ siteUrl, days }) => {
-    try {
-      const result = await analytics.getPerformanceSummary(siteUrl, days);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_compare_periods",
-  "Compare performance metrics between two date periods. Useful for week-over-week or month-over-month analysis.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    period1Start: z.string().describe("Start date of first (current) period (YYYY-MM-DD)"),
-    period1End: z.string().describe("End date of first (current) period (YYYY-MM-DD)"),
-    period2Start: z.string().describe("Start date of second (comparison) period (YYYY-MM-DD)"),
-    period2End: z.string().describe("End date of second (comparison) period (YYYY-MM-DD)")
+  sitemaps_get: {
+    description: "Get details about a specific sitemap",
+    schema: z.object({ siteUrl: z.string(), feedpath: z.string() }),
+    run: async ({ siteUrl, feedpath }) => sitemaps.getSitemap(siteUrl as string, feedpath as string),
   },
-  async ({ siteUrl, period1Start, period1End, period2Start, period2End }) => {
-    try {
-      const result = await analytics.comparePeriods(siteUrl, period1Start, period1End, period2Start, period2End);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_top_queries",
-  "Get top search queries by clicks or impressions for the last N days.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 28)"),
-    limit: z.number().optional().describe("Number of top queries to return (default: 10)"),
-    sortBy: z.enum(["clicks", "impressions"]).optional().describe("Sort by clicks or impressions (default: clicks)")
+  sitemaps_submit: {
+    description: "Submit a sitemap",
+    schema: z.object({ siteUrl: z.string(), feedpath: z.string() }),
+    run: async ({ siteUrl, feedpath }) => sitemaps.submitSitemap(siteUrl as string, feedpath as string),
   },
-  async ({ siteUrl, days, limit, sortBy }) => {
-    try {
-      const result = await analytics.getTopQueries(siteUrl, { days, limit, sortBy });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_top_pages",
-  "Get top performing pages by clicks or impressions for the last N days.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 28)"),
-    limit: z.number().optional().describe("Number of top pages to return (default: 10)"),
-    sortBy: z.enum(["clicks", "impressions"]).optional().describe("Sort by clicks or impressions (default: clicks)")
+  sitemaps_delete: {
+    description: "Delete a sitemap",
+    schema: z.object({ siteUrl: z.string(), feedpath: z.string() }),
+    run: async ({ siteUrl, feedpath }) => sitemaps.deleteSitemap(siteUrl as string, feedpath as string),
   },
-  async ({ siteUrl, days, limit, sortBy }) => {
-    try {
-      const result = await analytics.getTopPages(siteUrl, { days, limit, sortBy });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_by_country",
-  "Get performance breakdown by country for the last N days.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 28)"),
-    limit: z.number().optional().describe("Number of countries to return (default: 250)"),
-    sortBy: z.enum(["clicks", "impressions"]).optional().describe("Sort by clicks or impressions (default: clicks)")
+  analytics_query: {
+    description: "Query search analytics data with optional pagination",
+    schema: z.object({
+      siteUrl: z.string(),
+      startDate: z.string(),
+      endDate: z.string(),
+      dimensions: z.array(z.string()).optional(),
+      type: z.enum(["web", "image", "video", "news", "discover", "googleNews"]).optional(),
+      aggregationType: z.enum(["auto", "byProperty", "byPage"]).optional(),
+      dataState: z.enum(["final", "all"]).optional(),
+      limit: z.number().optional(),
+      startRow: z.number().optional(),
+      filters: z
+        .array(
+          z.object({
+            dimension: z.string(),
+            operator: z.string(),
+            expression: z.string(),
+          }),
+        )
+        .optional(),
+    }),
+    run: async (args) => analytics.queryAnalytics(args as any),
   },
-  async ({ siteUrl, days, limit, sortBy }) => {
-    try {
-      const result = await analytics.getPerformanceByCountry(siteUrl, { days, limit, sortBy });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_search_appearance",
-  "Get performance breakdown by search appearance type for the last N days.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 28)"),
-    limit: z.number().optional().describe("Number of types to return (default: 50)"),
-    sortBy: z.enum(["clicks", "impressions"]).optional().describe("Sort by clicks or impressions (default: clicks)")
+  analytics_performance_summary: {
+    description: "Get aggregate performance metrics for the last N days",
+    schema: z.object({ siteUrl: z.string(), days: z.number().optional() }),
+    run: async ({ siteUrl, days }) => analytics.getPerformanceSummary(siteUrl as string, days as number | undefined),
   },
-  async ({ siteUrl, days, limit, sortBy }) => {
-    try {
-      const result = await analytics.getPerformanceBySearchAppearance(siteUrl, { days, limit, sortBy });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_trends",
-  "Detect traffic trends (rising/declining) for queries or pages.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    dimension: z.enum(["query", "page"]).optional().describe("Dimension to analyze (default: query)"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    threshold: z.number().optional().describe("Minimum percentage change to consider (default: 10)"),
-    minClicks: z.number().optional().describe("Minimum clicks required to be considered (default: 100)"),
-    limit: z.number().optional().describe("Max results to return (default: 20)")
+  analytics_compare_periods: {
+    description: "Compare performance metrics between two date periods",
+    schema: z.object({
+      siteUrl: z.string(),
+      period1Start: z.string(),
+      period1End: z.string(),
+      period2Start: z.string(),
+      period2End: z.string(),
+    }),
+    run: async ({ siteUrl, period1Start, period1End, period2Start, period2End }) =>
+      analytics.comparePeriods(
+        siteUrl as string,
+        period1Start as string,
+        period1End as string,
+        period2Start as string,
+        period2End as string,
+      ),
   },
-  async ({ siteUrl, dimension, days, threshold, minClicks, limit }) => {
-    try {
-      const result = await analytics.detectTrends(siteUrl, { dimension, days, threshold, minClicks, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_anomalies",
-  "Identify unusual daily spikes or drops in traffic.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back for baseline (default: 30)"),
-    threshold: z.number().optional().describe("Sensitivity threshold (Standard Deviations, default: 2.5)")
+  analytics_top_queries: {
+    description: "Get top search queries by clicks or impressions",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      limit: z.number().optional(),
+      sortBy: z.enum(["clicks", "impressions"]).optional(),
+    }),
+    run: async ({ siteUrl, days, limit, sortBy }) =>
+      analytics.getTopQueries(siteUrl as string, {
+        days: days as number | undefined,
+        limit: limit as number | undefined,
+        sortBy: sortBy as "clicks" | "impressions" | undefined,
+      }),
   },
-  async ({ siteUrl, days, threshold }) => {
-    try {
-      const result = await analytics.detectAnomalies(siteUrl, { days, threshold });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_drop_attribution",
-  "Analyze a significant traffic drop to identify if it was caused by specific devices (mobile/desktop) or coincides with known Google algorithm updates.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days to look back (default: 30)"),
-    threshold: z.number().optional().describe("Sensitivity threshold for drop detection (Standard Deviations, default: 2.0)")
+  analytics_top_pages: {
+    description: "Get top performing pages by clicks or impressions",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      limit: z.number().optional(),
+      sortBy: z.enum(["clicks", "impressions"]).optional(),
+    }),
+    run: async ({ siteUrl, days, limit, sortBy }) =>
+      analytics.getTopPages(siteUrl as string, {
+        days: days as number | undefined,
+        limit: limit as number | undefined,
+        sortBy: sortBy as "clicks" | "impressions" | undefined,
+      }),
   },
-  async ({ siteUrl, days, threshold }) => {
-    try {
-      const result = await advancedAnalytics.analyzeDropAttribution(siteUrl, { days, threshold });
-      return {
-        content: [{ type: "text", text: result ? JSON.stringify(result, null, 2) : "No significant traffic drop detected in the specified period." }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "analytics_time_series",
-  "Get advanced time series data including rolling averages, seasonality strength, and trend forecasting. Supports multi-dimensional analysis, metrics selection, and custom granularities.",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    days: z.number().optional().describe("Number of days of history to analyze (default: 60)"),
-    startDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
-    endDate: z.string().optional().describe("End date (YYYY-MM-DD)"),
-    dimensions: z.array(z.string()).optional().describe("Dimensions to group by (default: ['date'])"),
-    metrics: z.array(z.enum(["clicks", "impressions", "ctr", "position"])).optional().describe("Metrics to analyze (default: ['clicks'])"),
-    granularity: z.enum(["daily", "weekly"]).optional().describe("Granularity of the data (default: daily)"),
-    filters: z.array(z.object({
-      dimension: z.string(),
-      operator: z.string(),
-      expression: z.string()
-    })).optional().describe("Filter groups to apply"),
-    window: z.number().optional().describe("Window size for rolling average in days/weeks (default: 7)"),
-    forecastDays: z.number().optional().describe("Number of units (days/weeks) to forecast into the future (default: 7)")
+  analytics_by_country: {
+    description: "Get performance breakdown by country",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      limit: z.number().optional(),
+      sortBy: z.enum(["clicks", "impressions"]).optional(),
+    }),
+    run: async ({ siteUrl, days, limit, sortBy }) =>
+      analytics.getPerformanceByCountry(siteUrl as string, {
+        days: days as number | undefined,
+        limit: limit as number | undefined,
+        sortBy: sortBy as "clicks" | "impressions" | undefined,
+      }),
   },
-  async ({ siteUrl, days, startDate, endDate, dimensions, metrics, granularity, filters, window, forecastDays }) => {
-    try {
-      const result = await advancedAnalytics.getTimeSeriesInsights(siteUrl, {
-        days,
-        startDate,
-        endDate,
-        dimensions,
-        metrics,
-        granularity,
-        filters,
-        window,
-        forecastDays
-      });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-// Inspection Tools
-server.tool(
-  "inspection_inspect",
-  "Inspect a URL to check its indexing status, crawl info, and mobile usability",
-  {
-    siteUrl: z.string().describe("The URL of the property (must match a verified property in Search Console)"),
-    inspectionUrl: z.string().describe("The fully-qualified URL to inspect (must be under the siteUrl property)"),
-    languageCode: z.string().optional().describe("Language code for localized results (default: en-US)")
+  analytics_search_appearance: {
+    description: "Get performance breakdown by search appearance",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      limit: z.number().optional(),
+      sortBy: z.enum(["clicks", "impressions"]).optional(),
+    }),
+    run: async ({ siteUrl, days, limit, sortBy }) =>
+      analytics.getPerformanceBySearchAppearance(siteUrl as string, {
+        days: days as number | undefined,
+        limit: limit as number | undefined,
+        sortBy: sortBy as "clicks" | "impressions" | undefined,
+      }),
   },
-  async ({ siteUrl, inspectionUrl, languageCode }) => {
-    try {
-      const result = await inspection.inspectUrl(siteUrl, inspectionUrl, languageCode);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-// PageSpeed Insights Tools
-server.tool(
-  "pagespeed_analyze",
-  "Run PageSpeed Insights analysis on a URL to get performance, accessibility, best practices, and SEO scores",
-  {
-    url: z.string().describe("The URL to analyze"),
-    strategy: z.enum(["mobile", "desktop"]).optional().describe("Device strategy (default: mobile)")
+  analytics_trends: {
+    description: "Detect rising and declining traffic trends",
+    schema: z.object({
+      siteUrl: z.string(),
+      dimension: z.enum(["query", "page"]).optional(),
+      days: z.number().optional(),
+      threshold: z.number().optional(),
+      minClicks: z.number().optional(),
+      limit: z.number().optional(),
+    }),
+    run: async ({ siteUrl, dimension, days, threshold, minClicks, limit }) =>
+      analytics.detectTrends(siteUrl as string, {
+        dimension: dimension as "query" | "page" | undefined,
+        days: days as number | undefined,
+        threshold: threshold as number | undefined,
+        minClicks: minClicks as number | undefined,
+        limit: limit as number | undefined,
+      }),
   },
-  async ({ url, strategy }) => {
-    try {
-      const result = await pagespeed.analyzePageSpeed(url, strategy || 'mobile');
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "pagespeed_core_web_vitals",
-  "Get Core Web Vitals for both mobile and desktop including LCP, FID, CLS, FCP, TTI, and TBT",
-  {
-    url: z.string().describe("The URL to analyze")
+  analytics_anomalies: {
+    description: "Identify unusual daily spikes or drops",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      threshold: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, threshold }) =>
+      analytics.detectAnomalies(siteUrl as string, {
+        days: days as number | undefined,
+        threshold: threshold as number | undefined,
+      }),
   },
-  async ({ url }) => {
-    try {
-      const result = await pagespeed.getCoreWebVitals(url);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-// SEO Insights Tools
-server.tool(
-  "seo_recommendations",
-  "Generate SEO recommendations based on site performance data",
-  {
-    siteUrl: z.string().describe("The site URL (e.g., https://example.com)"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)")
+  analytics_drop_attribution: {
+    description: "Analyze whether drops are device or update related",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      threshold: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, threshold }) =>
+      advancedAnalytics.analyzeDropAttribution(siteUrl as string, {
+        days: days as number | undefined,
+        threshold: threshold as number | undefined,
+      }),
   },
-  async ({ siteUrl, days }) => {
-    try {
-      const result = await seoInsights.generateRecommendations(siteUrl, { days });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_low_hanging_fruit",
-  "Find keywords with high impressions but low rankings (positions 5-20) that have potential for quick wins",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    minImpressions: z.number().optional().describe("Minimum impressions threshold (default: 100)"),
-    limit: z.number().optional().describe("Max results to return (default: 50)")
+  analytics_time_series: {
+    description: "Get rolling averages, seasonality, and forecasts",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      dimensions: z.array(z.string()).optional(),
+      metrics: z.array(z.enum(["clicks", "impressions", "ctr", "position"])).optional(),
+      granularity: z.enum(["daily", "weekly"]).optional(),
+      filters: z
+        .array(
+          z.object({
+            dimension: z.string(),
+            operator: z.string(),
+            expression: z.string(),
+          }),
+        )
+        .optional(),
+      window: z.number().optional(),
+      forecastDays: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, startDate, endDate, dimensions, metrics, granularity, filters, window, forecastDays }) =>
+      advancedAnalytics.getTimeSeriesInsights(siteUrl as string, {
+        days: days as number | undefined,
+        startDate: startDate as string | undefined,
+        endDate: endDate as string | undefined,
+        dimensions: dimensions as string[] | undefined,
+        metrics: metrics as ("clicks" | "impressions" | "ctr" | "position")[] | undefined,
+        granularity: granularity as "daily" | "weekly" | undefined,
+        filters: filters as { dimension: string; operator: string; expression: string }[] | undefined,
+        window: window as number | undefined,
+        forecastDays: forecastDays as number | undefined,
+      }),
   },
-  async ({ siteUrl, days, minImpressions, limit }) => {
-    try {
-      const result = await seoInsights.findLowHangingFruit(siteUrl, { days, minImpressions, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_cannibalization",
-  "Detect keyword cannibalization - multiple pages competing for the same query",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    minImpressions: z.number().optional().describe("Minimum impressions threshold (default: 50)"),
-    limit: z.number().optional().describe("Max issues to return (default: 30)")
+  inspection_inspect: {
+    description: "Inspect URL indexing status and crawl information",
+    schema: z.object({
+      siteUrl: z.string(),
+      inspectionUrl: z.string(),
+      languageCode: z.string().optional(),
+    }),
+    run: async ({ siteUrl, inspectionUrl, languageCode }) =>
+      inspection.inspectUrl(siteUrl as string, inspectionUrl as string, languageCode as string | undefined),
   },
-  async ({ siteUrl, days, minImpressions, limit }) => {
-    try {
-      const result = await seoInsights.detectCannibalization(siteUrl, { days, minImpressions, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_low_ctr_opportunities",
-  "Find queries ranking in positions 1-10 with low CTR (< 60% of benchmark). Great for title tag optimization.",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    minImpressions: z.number().optional().describe("Minimum impressions threshold (default: 500)"),
-    limit: z.number().optional().describe("Max results to return (default: 50)")
+  pagespeed_analyze: {
+    description: "Run PageSpeed Insights for a URL",
+    schema: z.object({
+      url: z.string(),
+      strategy: z.enum(["mobile", "desktop"]).optional(),
+    }),
+    run: async ({ url, strategy }) => pagespeed.analyzePageSpeed(url as string, (strategy as "mobile" | "desktop" | undefined) ?? "mobile"),
   },
-  async ({ siteUrl, days, minImpressions, limit }) => {
-    try {
-      const result = await seoInsights.findLowCTROpportunities(siteUrl, { days, minImpressions, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_striking_distance",
-  "Find keywords ranking in positions 8-15. These are high-priority targets to push to Page 1.",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    limit: z.number().optional().describe("Max results to return (default: 50)")
+  pagespeed_core_web_vitals: {
+    description: "Get Core Web Vitals for mobile and desktop",
+    schema: z.object({ url: z.string() }),
+    run: async ({ url }) => pagespeed.getCoreWebVitals(url as string),
   },
-  async ({ siteUrl, days, limit }) => {
-    try {
-      const result = await seoInsights.findStrikingDistance(siteUrl, { days, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_lost_queries",
-  "Identify queries that lost all traffic (or dropped >80%) compared to the previous period.",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to compare (default: 28)"),
-    limit: z.number().optional().describe("Max results to return (default: 50)")
+  seo_recommendations: {
+    description: "Generate high-level SEO recommendations",
+    schema: z.object({ siteUrl: z.string(), days: z.number().optional() }),
+    run: async ({ siteUrl, days }) => seoInsights.generateRecommendations(siteUrl as string, { days: days as number | undefined }),
   },
-  async ({ siteUrl, days, limit }) => {
-    try {
-      const result = await seoInsights.findLostQueries(siteUrl, { days, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_brand_vs_nonbrand",
-  "Analyze performance split between Brand and Non-Brand queries using a regex.",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    brandRegex: z.string().describe("Regex to match brand keywords (e.g. 'acme|acme corp')"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)")
+  seo_low_hanging_fruit: {
+    description: "Find high-impression keywords in positions 5-20",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      minImpressions: z.number().optional(),
+      limit: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, minImpressions, limit }) =>
+      seoInsights.findLowHangingFruit(siteUrl as string, {
+        days: days as number | undefined,
+        minImpressions: minImpressions as number | undefined,
+        limit: limit as number | undefined,
+      }),
   },
-  async ({ siteUrl, brandRegex, days }) => {
-    try {
-      const result = await seoInsights.analyzeBrandVsNonBrand(siteUrl, brandRegex, { days });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
-    }
-  }
-);
-
-server.tool(
-  "seo_quick_wins",
-  "Find pages with queries ranking on page 2 (positions 11-20) that could be pushed to page 1",
-  {
-    siteUrl: z.string().describe("The site URL"),
-    days: z.number().optional().describe("Number of days to analyze (default: 28)"),
-    minImpressions: z.number().optional().describe("Minimum impressions threshold (default: 100)"),
-    limit: z.number().optional().describe("Max results to return (default: 20)")
+  seo_cannibalization: {
+    description: "Detect multiple pages competing for one query",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      minImpressions: z.number().optional(),
+      limit: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, minImpressions, limit }) =>
+      seoInsights.detectCannibalization(siteUrl as string, {
+        days: days as number | undefined,
+        minImpressions: minImpressions as number | undefined,
+        limit: limit as number | undefined,
+      }),
   },
-  async ({ siteUrl, days, minImpressions, limit }) => {
+  seo_low_ctr_opportunities: {
+    description: "Find low CTR opportunities on page-one rankings",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      minImpressions: z.number().optional(),
+      limit: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, minImpressions, limit }) =>
+      seoInsights.findLowCTROpportunities(siteUrl as string, {
+        days: days as number | undefined,
+        minImpressions: minImpressions as number | undefined,
+        limit: limit as number | undefined,
+      }),
+  },
+  seo_striking_distance: {
+    description: "Find keywords in positions 8-15",
+    schema: z.object({ siteUrl: z.string(), days: z.number().optional(), limit: z.number().optional() }),
+    run: async ({ siteUrl, days, limit }) =>
+      seoInsights.findStrikingDistance(siteUrl as string, { days: days as number | undefined, limit: limit as number | undefined }),
+  },
+  seo_lost_queries: {
+    description: "Find queries that dropped sharply or vanished",
+    schema: z.object({ siteUrl: z.string(), days: z.number().optional(), limit: z.number().optional() }),
+    run: async ({ siteUrl, days, limit }) =>
+      seoInsights.findLostQueries(siteUrl as string, { days: days as number | undefined, limit: limit as number | undefined }),
+  },
+  seo_brand_vs_nonbrand: {
+    description: "Split performance into brand and non-brand queries",
+    schema: z.object({
+      siteUrl: z.string(),
+      brandRegex: z.string(),
+      days: z.number().optional(),
+    }),
+    run: async ({ siteUrl, brandRegex, days }) =>
+      seoInsights.analyzeBrandVsNonBrand(siteUrl as string, brandRegex as string, { days: days as number | undefined }),
+  },
+  seo_quick_wins: {
+    description: "Find page-two ranking opportunities",
+    schema: z.object({
+      siteUrl: z.string(),
+      days: z.number().optional(),
+      minImpressions: z.number().optional(),
+      limit: z.number().optional(),
+    }),
+    run: async ({ siteUrl, days, minImpressions, limit }) =>
+      seoInsights.findQuickWins(siteUrl as string, {
+        days: days as number | undefined,
+        minImpressions: minImpressions as number | undefined,
+        limit: limit as number | undefined,
+      }),
+  },
+  seo_primitive_ranking_bucket: {
+    description: "Get ranking bucket for a position",
+    schema: z.object({ position: z.number() }),
+    run: ({ position }) => seoPrimitives.getRankingBucket(position as number),
+  },
+  seo_primitive_traffic_delta: {
+    description: "Calculate traffic delta and percentage",
+    schema: z.object({ current: z.number(), previous: z.number() }),
+    run: ({ current, previous }) => seoPrimitives.calculateTrafficDelta(current as number, previous as number),
+  },
+  seo_primitive_is_brand: {
+    description: "Check whether query is brand-matching",
+    schema: z.object({ query: z.string(), brandRegex: z.string() }),
+    run: ({ query, brandRegex }) => seoPrimitives.isBrandQuery(query as string, brandRegex as string),
+  },
+  seo_primitive_is_cannibalized: {
+    description: "Check whether two pages cannibalize one query",
+    schema: z.object({
+      query: z.string(),
+      pageA_position: z.number(),
+      pageA_impressions: z.number(),
+      pageA_clicks: z.number(),
+      pageB_position: z.number(),
+      pageB_impressions: z.number(),
+      pageB_clicks: z.number(),
+    }),
+    run: ({ query, pageA_position, pageA_impressions, pageA_clicks, pageB_position, pageB_impressions, pageB_clicks }) =>
+      seoPrimitives.isCannibalized(
+        query as string,
+        {
+          position: pageA_position as number,
+          impressions: pageA_impressions as number,
+          clicks: pageA_clicks as number,
+        },
+        {
+          position: pageB_position as number,
+          impressions: pageB_impressions as number,
+          clicks: pageB_clicks as number,
+        },
+      ),
+  },
+  schema_validate: {
+    description: "Validate Schema.org structured data",
+    schema: z.object({
+      type: z.enum(["url", "html", "json"]),
+      data: z.string(),
+    }),
+    run: async ({ type, data }) => schemaValidator.validateSchema(data as string, type as "url" | "html" | "json"),
+  },
+  util_star_repo: {
+    description: "Star the GitHub repository",
+    schema: z.object({}),
+    run: async () => starRepository(),
+  },
+};
+
+function toCamelCase(key: string): string {
+  return key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+function coerceValue(value: string): unknown {
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  if ((value.startsWith("{") && value.endsWith("}")) || (value.startsWith("[") && value.endsWith("]"))) {
     try {
-      const result = await seoInsights.findQuickWins(siteUrl, { days, minImpressions, limit });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
+      return JSON.parse(value);
+    } catch {
+      return value;
     }
   }
-);
+  return value;
+}
 
+function parseFlags(tokens: string[]): Record<string, unknown> {
+  const parsed: Record<string, unknown> = {};
 
-// SEO Primitives (Atoms)
-server.tool(
-  "seo_primitive_ranking_bucket",
-  "primitive: Get the ranking bucket for a specific position (e.g. Top 3, Page 1).",
-  { position: z.number().describe("The ranking position") },
-  async ({ position }) => {
-    return {
-      content: [{ type: "text", text: JSON.stringify(seoPrimitives.getRankingBucket(position), null, 2) }]
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    if (!token.startsWith("--")) {
+      throw new Error(`Unexpected positional argument: ${token}`);
+    }
+
+    const withoutPrefix = token.slice(2);
+    const [rawKey, inlineValue] = withoutPrefix.split("=", 2);
+    const key = toCamelCase(rawKey);
+    const valueToken = inlineValue ?? tokens[i + 1];
+
+    let value: unknown;
+    if (inlineValue !== undefined) {
+      value = coerceValue(inlineValue);
+    } else if (!valueToken || valueToken.startsWith("--")) {
+      value = true;
+    } else {
+      value = coerceValue(valueToken);
+      i += 1;
+    }
+
+    if (parsed[key] === undefined) {
+      parsed[key] = value;
+    } else if (Array.isArray(parsed[key])) {
+      (parsed[key] as unknown[]).push(value);
+    } else {
+      parsed[key] = [parsed[key], value];
+    }
+
+    i += 1;
+  }
+
+  return parsed;
+}
+
+function printUsage(): void {
+  console.log("Google Search Console CLI (Bun)");
+  console.log("\nUsage:");
+  console.log("  search-console <command> [--flag value]");
+  console.log("  search-console <command> --input '{\"key\":\"value\"}'");
+  console.log("\nExamples:");
+  console.log("  search-console sites_list");
+  console.log("  search-console analytics_performance_summary --site-url https://example.com --days 28");
+  console.log("  search-console analytics_query --input '{\"siteUrl\":\"https://example.com\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-31\",\"dimensions\":[\"query\"],\"limit\":10}'");
+  console.log("\nCommands:");
+
+  const rows = Object.entries(commands)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, command]) => `  ${name.padEnd(32, " ")} ${command.description}`);
+
+  for (const row of rows) {
+    console.log(row);
+  }
+}
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  const commandName = argv[0];
+
+  if (!commandName || commandName === "help" || commandName === "--help" || commandName === "-h") {
+    printUsage();
+    return;
+  }
+
+  const command = commands[commandName];
+  if (!command) {
+    console.error(`Unknown command: ${commandName}`);
+    console.error("Run `search-console --help` to view available commands.");
+    process.exit(1);
+  }
+
+  try {
+    const flags = parseFlags(argv.slice(1));
+    const input = typeof flags.input === "string" ? JSON.parse(flags.input) : flags.input;
+    const payload = {
+      ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
+      ...flags,
     };
-  }
-);
 
-server.tool(
-  "seo_primitive_traffic_delta",
-  "primitive: Calculate the delta between two traffic metrics (absolute and percentage).",
-  {
-    current: z.number().describe("Current value"),
-    previous: z.number().describe("Previous value")
-  },
-  async ({ current, previous }) => {
-    return {
-      content: [{ type: "text", text: JSON.stringify(seoPrimitives.calculateTrafficDelta(current, previous), null, 2) }]
-    };
-  }
-);
+    delete payload.input;
 
-server.tool(
-  "seo_primitive_is_brand",
-  "primitive: Check if a query is a brand query based on a regex pattern.",
-  {
-    query: z.string().describe("The search query"),
-    brandRegex: z.string().describe("Regex pattern to identify brand terms")
-  },
-  async ({ query, brandRegex }) => {
-    return {
-      content: [{ type: "text", text: JSON.stringify(seoPrimitives.isBrandQuery(query, brandRegex), null, 2) }]
-    };
-  }
-);
-
-server.tool(
-  "seo_primitive_is_cannibalized",
-  "primitive: Check if two pages are competing for the same query based on their metrics.",
-  {
-    query: z.string().describe("The search query"),
-    pageA_position: z.number(),
-    pageA_impressions: z.number(),
-    pageA_clicks: z.number(),
-    pageB_position: z.number(),
-    pageB_impressions: z.number(),
-    pageB_clicks: z.number()
-  },
-  async ({ query, pageA_position, pageA_impressions, pageA_clicks, pageB_position, pageB_impressions, pageB_clicks }) => {
-    const pageA = { position: pageA_position, impressions: pageA_impressions, clicks: pageA_clicks };
-    const pageB = { position: pageB_position, impressions: pageB_impressions, clicks: pageB_clicks };
-    return {
-      content: [{ type: "text", text: JSON.stringify(seoPrimitives.isCannibalized(query, pageA, pageB), null, 2) }]
-    };
-  }
-);
-
-// Schema Validator Tools
-server.tool(
-  "schema_validate",
-  "Validate Schema.org structured data (JSON-LD) from a URL, HTML snippet, or JSON object.",
-  {
-    type: z.enum(["url", "html", "json"]).describe("The type of input provided"),
-    data: z.string().describe("The URL, HTML content, or JSON string to validate")
-  },
-  async ({ type, data }) => {
-    try {
-      const result = await schemaValidator.validateSchema(data, type as 'url' | 'html' | 'json');
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-      };
-    } catch (error) {
-      return formatError(error);
+    const parsed = command.schema.safeParse(payload);
+    if (!parsed.success) {
+      const details = parsed.error.issues.map((issue) => `${issue.path.join(".") || "<root>"}: ${issue.message}`).join("\n");
+      console.error(`Invalid arguments for ${commandName}:\n${details}`);
+      process.exit(1);
     }
-  }
-);
 
-// Support Tools
-server.tool(
-  "util_star_repo",
-  "Star the GitHub repository to support the project. Uses GitHub CLI if available, or opens a browser.",
-  {},
-  async () => {
-    try {
-      const { starRepository } = await import("./tools/support.js");
-      const result = await starRepository();
-      return {
-        content: [{ type: "text", text: result }]
-      };
-    } catch (error) {
-      return formatError(error);
+    const result = await command.run(parsed.data);
+    if (typeof result === "string") {
+      console.log(result);
+      return;
     }
+    console.log(JSON.stringify(result ?? { ok: true }, null, 2));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Command failed: ${message}`);
+    process.exit(1);
   }
-);
-
-// Resources
-server.resource(
-  "sites",
-  "sites://list",
-  async (uri) => {
-    const result = await sites.listSites();
-    return {
-      contents: [{
-        uri: uri.href,
-        text: JSON.stringify(result, null, 2),
-        mimeType: "application/json"
-      }]
-    };
-  }
-);
-
-server.resource(
-  "sitemaps",
-  "sitemaps://list/{siteUrl}",
-  async (uri) => {
-    const siteUrl = decodeURIComponent(uri.pathname.replace('/list/', ''));
-    const result = await sitemaps.listSitemaps(siteUrl);
-    return {
-      contents: [{
-        uri: uri.href,
-        text: JSON.stringify(result, null, 2),
-        mimeType: "application/json"
-      }]
-    };
-  }
-);
-
-server.resource(
-  "analytics-summary",
-  "analytics://summary/{siteUrl}",
-  async (uri) => {
-    const siteUrl = decodeURIComponent(uri.pathname.replace('/summary/', ''));
-    const result = await analytics.getPerformanceSummary(siteUrl);
-    return {
-      contents: [{
-        uri: uri.href,
-        text: JSON.stringify(result, null, 2),
-        mimeType: "application/json"
-      }]
-    };
-  }
-);
-
-// Documentation Resources
-import { dimensionsDocs, filtersDocs, searchTypesDocs, patternsDocs, algorithmUpdatesDocs } from "./docs/index.js";
-
-server.resource(
-  "docs-dimensions",
-  "docs://dimensions",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: dimensionsDocs,
-      mimeType: "text/markdown"
-    }]
-  })
-);
-
-server.resource(
-  "docs-filters",
-  "docs://filters",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: filtersDocs,
-      mimeType: "text/markdown"
-    }]
-  })
-);
-
-server.resource(
-  "docs-search-types",
-  "docs://search-types",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: searchTypesDocs,
-      mimeType: "text/markdown"
-    }]
-  })
-);
-
-server.resource(
-  "docs-patterns",
-  "docs://patterns",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: patternsDocs,
-      mimeType: "text/markdown"
-    }]
-  })
-);
-
-server.resource(
-  "docs-algorithm-updates",
-  "docs://algorithm-updates",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: algorithmUpdatesDocs,
-      mimeType: "text/markdown"
-    }]
-  })
-);
-
-// Prompts
-server.prompt(
-  "analyze-site-performance",
-  { siteUrl: z.string().describe("The URL of the site to analyze") },
-  ({ siteUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please analyze the performance of the site ${siteUrl} for the last 28 days.
-        Use the 'analytics_performance_summary' tool to get high-level metrics, and 'analytics_query' to dig deeper into top queries and pages if needed.
-        Provide a summary of the site's health and any opportunities for improvement.`
-      }
-    }]
-  })
-);
-
-server.prompt(
-  "compare-performance",
-  { siteUrl: z.string().describe("The URL of the site to analyze") },
-  ({ siteUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Compare the performance of ${siteUrl} for this week vs last week.
-
-Use the 'analytics_compare_periods' tool to compare the two periods:
-- Period 1 (this week): last 7 days ending 3 days ago (to account for data delay)
-- Period 2 (last week): the 7 days before that
-
-Analyze the changes in clicks, impressions, CTR, and position.
-Highlight any significant improvements or declines.
-If there are notable changes, use 'analytics_top_queries' to identify which queries are driving the change.`
-      }
-    }]
-  })
-);
-
-server.prompt(
-  "find-declining-pages",
-  { siteUrl: z.string().describe("The URL of the site to analyze") },
-  ({ siteUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Find pages on ${siteUrl} that are losing traffic.
-
-Steps:
-1. Use 'analytics_compare_periods' to compare this week vs last week overall
-2. Use 'analytics_query' with dimension 'page' to get page-level data for both periods
-3. Identify pages with significant click/impression drops
-
-For each declining page, provide:
-- The URL
-- Previous vs current performance
-- Possible reasons and recommendations`
-      }
-    }]
-  })
-);
-
-server.prompt(
-  "keyword-opportunities",
-  { siteUrl: z.string().describe("The URL of the site to analyze") },
-  ({ siteUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Find keyword opportunities for ${siteUrl}.
-
-Use 'analytics_top_queries' to get top queries, then analyze for:
-
-1. **Low CTR, High Impressions**: Queries where you rank but don't get clicks
-   - These need better titles/meta descriptions
-   - Look for CTR < 2% with impressions > 100
-
-2. **High Position (>10), Good Impressions**: Queries not on page 1
-   - These are close to ranking well
-   - Small optimization could move them up
-
-3. **New Ranking Queries**: Queries that appeared recently
-   - Opportunities to create more content
-
-Provide specific recommendations for the top 5 opportunities.`
-      }
-    }]
-  })
-);
-
-server.prompt(
-  "new-content-impact",
-  {
-    siteUrl: z.string().describe("The URL of the site"),
-    pageUrl: z.string().describe("The URL of the new content to analyze")
-  },
-  ({ siteUrl, pageUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Analyze the impact of new content at ${pageUrl} on site ${siteUrl}.
-
-1. Use 'inspection_inspect' to check if the page is indexed
-2. Use 'analytics_query' with a page filter for this URL to get its performance data
-3. Identify which queries are driving traffic to this page
-
-Provide:
-- Indexing status
-- Key metrics (clicks, impressions, CTR, position)
-- Top queries ranking for this page
-- Recommendations for improvement`
-      }
-    }]
-  })
-);
-
-server.prompt(
-  "mobile-vs-desktop",
-  { siteUrl: z.string().describe("The URL of the site to analyze") },
-  ({ siteUrl }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Compare mobile vs desktop performance for ${siteUrl}.
-
-Use 'analytics_query' with dimension 'device' to get device-level metrics.
-
-Analyze:
-1. Click and impression distribution across devices
-2. CTR differences between mobile and desktop
-3. Position ranking differences
-
-If there's a significant gap (e.g., mobile CTR much lower), investigate:
-- Use 'inspection_inspect' on key pages to check mobile usability
-- Recommend specific improvements
-
-Provide a summary with actionable recommendations.`
-      }
-    }]
-  })
-);
-
-async function main() {
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    console.error('\n╔══════════════════════════════════════════════════════════════╗');
-    console.error('║          🚀 Google Search Console MCP Server                 ║');
-    console.error('╚══════════════════════════════════════════════════════════════╝\n');
-    console.error('❌ GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.\n');
-    console.error('💡 To set up the server, run the setup wizard:');
-    console.error('   npx search-console-mcp-setup\n');
-    console.error('Alternatively, set the variable manually:');
-    console.error('   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/key.json\n');
-    console.error('─'.repeat(64) + '\n');
-  }
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Google Search Console MCP Server running on stdio");
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  console.error(message);
   process.exit(1);
 });

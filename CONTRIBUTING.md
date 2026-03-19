@@ -1,27 +1,27 @@
-# Contributing to Google Search Console MCP Server
+# Contributing to Google Search Console CLI
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to this project.
 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/search-console-mcp.git`
-3. Install dependencies: `npm install`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/search-console-cli.git`
+3. Install dependencies: `bun install`
 4. Create a branch: `git checkout -b feature/your-feature-name`
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 18+
+- Bun 1.0+
 - A Google Cloud project with Search Console API enabled
 - Service account credentials with appropriate permissions
 
 ### Setup
 
 1. Copy `.env.example` to `.env` and configure your credentials
-2. Run tests: `npm test`
-3. Build: `npm run build`
+2. Run tests: `bun run test`
+3. Build: `bun run build`
 
 ### Code Style
 
@@ -32,14 +32,14 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ## Pull Request Process
 
-1. Ensure all tests pass: `npm test`
-2. Build successfully: `npm run build`
+1. Ensure all tests pass: `bun run test`
+2. Build successfully: `bun run build`
 3. Update documentation if needed
 4. Create a pull request with a clear description of your changes
 
 ## Adding New Tools
 
-When adding new MCP tools:
+When adding new commands:
 
 1. Create the implementation in `src/tools/`
 2. Register the tool in `src/index.ts`

@@ -3,7 +3,7 @@ title: "Data vs. Intelligence"
 description: "Why we don't just return raw API logs."
 ---
 
-Most API integrations focus on **data delivery**: handing the computer a pile of numbers. This MCP focuses on **intelligence delivery**: handing the computer a set of findings.
+Most API integrations focus on **data delivery**: handing the computer a pile of numbers. This CLI focuses on **intelligence delivery**: handing the computer a set of findings.
 
 ## The Raw Data Problem
 
@@ -17,7 +17,7 @@ If you ask a model for keywords with "Striking Distance" (ranking 8-15) using ra
 ## The Intelligence Solution
 
 If you use the `seo_striking_distance` tool:
-1.  The MCP server fetches the 5,000 rows.
+1.  The CLI fetches the 5,000 rows.
 2.  It applies a strict filter: `position >= 8 && position <= 15`.
 3.  It sorts them by `impressions` to find the most valuable ones.
 4.  It returns only the top 50 relevant keywords.

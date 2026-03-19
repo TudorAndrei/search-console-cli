@@ -1,4 +1,4 @@
-# Available Tools in search-console-mcp
+# Available Tools in search-console-cli
 
 ## 📈 Analytics & Performance
 | Tool | Description |

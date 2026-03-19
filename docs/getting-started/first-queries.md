@@ -3,7 +3,7 @@ title: "First Queries"
 description: "Testing your SEO agent for the first time."
 ---
 
-Once the server is installed and authenticated, it's time to test it. Open your MCP-compatible client (like Claude Desktop) and start a conversation.
+Once the CLI is installed and authenticated, it's time to test it.
 
 ## Step 1: Verify Connection
 
@@ -28,7 +28,7 @@ The agent will likely use the `compare_periods` tool to give you a breakdown of 
 
 ## Step 3: Run an Intelligence Tool
 
-This is where the power of the MCP shines. Instead of asking for data, ask for an analysis.
+This is where deterministic tooling shines. Instead of asking for data, ask for an analysis.
 
 **User Prompt:**
 > "Can you find any 'quick wins' for https://example.com? I'm looking for pages ranking just off the first page that have high impressions."

@@ -3,7 +3,7 @@ title: "Claude Desktop Prompts"
 description: "Optimized prompts for analyzing SEO in Claude."
 ---
 
-Claude is excellent at synthesizing the deterministic data from our MCP server into deep strategic insights.
+Claude is excellent at synthesizing deterministic data from this CLI into deep strategic insights.
 
 ## The "SEO Audit" Prompt
 Use this to get a comprehensive view of your site's health.

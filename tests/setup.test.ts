@@ -53,13 +53,13 @@ describe('Setup Wizard - Repository Resolution', () => {
         expect(result).toBe('fallback/repo');
     });
 
-    it('should fallback to mcpName if repository url is missing', () => {
+    it('should fallback to repoSlug if repository url is missing', () => {
         vi.mocked(execSync).mockImplementation(() => {
             throw new Error('git failed');
         });
         vi.mocked(existsSync).mockReturnValue(true);
         vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
-            mcpName: 'io.github.owner/repo'
+            repoSlug: 'owner/repo'
         }));
 
         const result = resolveRepo('/fake/dir');
@@ -67,18 +67,18 @@ describe('Setup Wizard - Repository Resolution', () => {
         expect(result).toBe('owner/repo');
     });
 
-    it('should resolve the actual project repo correctly (saurabhsharma2u/search-console-mcp)', () => {
+    it('should resolve the actual project repo correctly (saurabhsharma2u/search-console-cli)', () => {
         vi.mocked(execSync).mockImplementation(() => {
             throw new Error('git failed');
         });
         vi.mocked(existsSync).mockReturnValue(true);
         vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
-            mcpName: 'io.github.saurabhsharma2u/search-console-mcp'
+            repoSlug: 'saurabhsharma2u/search-console-cli'
         }));
 
         const result = resolveRepo('/fake/dir');
 
-        expect(result).toBe('saurabhsharma2u/search-console-mcp');
+        expect(result).toBe('saurabhsharma2u/search-console-cli');
     });
 
     it('should return empty string if everything fails', () => {
@@ -90,17 +90,5 @@ describe('Setup Wizard - Repository Resolution', () => {
         const result = resolveRepo('/fake/dir');
 
         expect(result).toBe('');
-    });
-});
-
-describe('Setup Wizard - Star Command', () => {
-    it('should construct the correct gh api PUT command', () => {
-        // This is a logic check - since main() is interactive, 
-        // we verify the command string construction logic used in the implementation
-        const repo = 'saurabhsharma2u/search-console-mcp';
-        const expectedCommand = `gh api -X PUT /user/starred/${repo}`;
-
-        // We simulate the call that would happen in Step 5
-        expect(expectedCommand).toBe('gh api -X PUT /user/starred/saurabhsharma2u/search-console-mcp');
     });
 });

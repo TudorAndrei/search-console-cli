@@ -9,7 +9,7 @@ Cursor allows you to use SEO data directly in your IDE. This is perfect for deve
 Use this in the Chat window to find which files need optimization.
 
 ```markdown
-Run a PageSpeed report for my top 5 most visited pages on mobile using the search-console MCP. 
+Run a PageSpeed report for my top 5 most visited pages on mobile using search-console CLI. 
 Cross-reference the results with my local file structure. 
 Which React components or CSS files are most likely responsible for the 'Largest Contentful Paint' (LCP) issues on these pages?
 ```
@@ -24,5 +24,5 @@ Suggest improved, keyword-optimized titles that are likely to increase my CTR.
 ```
 
 ## Why these work well
-*   **Contextual Awareness:** Cursor knows your code. By using the MCP, it also knows your *results*. This bridge allows it to make code suggestions based on search performance.
+*   **Contextual Awareness:** Cursor knows your code. By using this CLI, it also knows your *results*. This bridge allows it to make code suggestions based on search performance.
 *   **Zero-Context Switching:** You don't have to leave your editor to know that your recent deploy slowed down your most important landing page.

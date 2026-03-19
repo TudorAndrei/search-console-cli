@@ -1,16 +1,16 @@
 ---
 title: "Architecture"
-description: "How the Search Console MCP server is built."
+description: "How the Search Console CLI is built."
 ---
 
-The `search-console-mcp` server acts as a middle layer between your AI agent and the Google Search Console APIs.
+The `search-console-cli` app acts as a middle layer between your AI agent and the Google Search Console APIs.
 
 ## Logic Layers
 
 ### 1. The Client (e.g., Claude)
-The agent initiates a request. It doesn't need to know the GSC API schema; it only needs to know the tools exposed by the MCP.
+The agent initiates a request. It doesn't need to know the GSC API schema; it only needs to know the available commands.
 
-### 2. The MCP Server (Middleware)
+### 2. The CLI Runtime (Middleware)
 This is where the magic happens.
 *   **Tool Registration:** Defines the JSON schema for tools like `analytics_time_series`.
 *   **Request Handlers:** Receives inputs, validates them with **Zod**, and routes them to the correct tool logic.
@@ -26,7 +26,7 @@ The server uses authorized service accounts to communicate with:
 
 ```mermaid
 graph LR
-    A[Agent] -- JSON-RPC --> B[MCP Server]
+    A[Agent] -- CLI Args --> B[CLI Runtime]
     B -- Intelligence Tools --> C[SEO Engine]
     C -- GSC API --> D[Google Search Console]
     D -- Data --> C

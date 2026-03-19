@@ -5,7 +5,7 @@ description: "How to root-cause a decline in SEO performance."
 
 **User Question:** *"My traffic has dropped 20% this week. Why?"*
 
-This workflow shows how an agent uses the MCP to act as a detective and attribute a drop to its root cause.
+This workflow shows how an agent uses the CLI tools to act as a detective and attribute a drop to its root cause.
 
 ## Step 1: Confirm the Magnitude
 The agent starts by verifying the drop and finding the exact start date using `analytics_time_series`.

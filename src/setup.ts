@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { readFileSync, existsSync, statSync } from 'fs';
 import { resolve, dirname, extname } from 'path';
 import { createInterface } from 'readline';
@@ -24,7 +24,7 @@ function ask(question: string): Promise<string> {
 
 function printHeader() {
     console.log('\n╔══════════════════════════════════════════════════════════════╗');
-    console.log('║          🔧 Search Console MCP - Setup Wizard               ║');
+    console.log('║          🔧 Search Console CLI - Setup Wizard               ║');
     console.log('╚══════════════════════════════════════════════════════════════╝\n');
 }
 
@@ -120,35 +120,15 @@ async function testConnection(keyPath: string): Promise<boolean> {
 }
 
 function showConfigSnippets(credentialsPath: string) {
-    console.log('\nAdd this to your MCP client configuration:\n');
-    console.log('For Claude Desktop (~/.config/claude/claude_desktop_config.json):');
+    console.log('\nRecommended local shell configuration:\n');
     console.log('─'.repeat(60));
-    console.log(JSON.stringify({
-        mcpServers: {
-            "search-console": {
-                command: "npx",
-                args: ["search-console-mcp"],
-                env: {
-                    GOOGLE_APPLICATION_CREDENTIALS: credentialsPath
-                }
-            }
-        }
-    }, null, 2));
+    console.log(`export GOOGLE_APPLICATION_CREDENTIALS="${credentialsPath}"`);
     console.log('─'.repeat(60));
 
-    console.log('\nFor VS Code Copilot (.vscode/mcp.json):');
+    console.log('\nRun commands with Bun:');
     console.log('─'.repeat(60));
-    console.log(JSON.stringify({
-        servers: {
-            "search-console": {
-                command: "npx",
-                args: ["search-console-mcp"],
-                env: {
-                    GOOGLE_APPLICATION_CREDENTIALS: credentialsPath
-                }
-            }
-        }
-    }, null, 2));
+    console.log('bun run src/index.ts sites_list');
+    console.log('bun run src/index.ts analytics_performance_summary --site-url https://example.com --days 28');
     console.log('─'.repeat(60));
 }
 
@@ -166,9 +146,8 @@ export function resolveRepo(dirname: string): string {
             const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
             if (pkg.repository?.url) {
                 repo = pkg.repository.url.replace(/.*github\.com\//, '').replace(/\.git$/, '');
-            } else if (pkg.mcpName && pkg.mcpName.includes('/')) {
-                // Handle io.github.owner/repo or owner/repo
-                repo = pkg.mcpName.replace(/^io\.github\./, '').split('/').slice(-2).join('/');
+            } else if (pkg.repoSlug && String(pkg.repoSlug).includes('/')) {
+                repo = String(pkg.repoSlug);
             }
         }
     }
@@ -178,7 +157,7 @@ export function resolveRepo(dirname: string): string {
 async function main() {
     printHeader();
 
-    console.log('This wizard will help you set up Search Console MCP.');
+    console.log('This wizard will help you set up Search Console CLI.');
     console.log('You will need a Google Cloud service account with Search Console access.\n');
 
     // Step 1: Check for existing credentials
@@ -242,9 +221,9 @@ async function main() {
         }
 
         // Step 4: Show configuration
-        printStep(4, 'Configure your MCP client');
+        printStep(4, 'Configure your shell and run commands');
         showConfigSnippets(credentialsPath);
-        console.log('\n🎉 Setup complete! You can now use Search Console MCP.\n');
+        console.log('\n🎉 Setup complete! You can now use Search Console CLI.\n');
 
     } else {
         // No path provided - just show config examples
@@ -254,31 +233,12 @@ async function main() {
         console.log('After creating your service account, add this email to Search Console:');
         console.log(`  📧 ${serviceAccountEmail}\n`);
 
-        printStep(3, 'Configure your MCP client');
+        printStep(3, 'Configure your shell and run commands');
         showConfigSnippets(credentialsPath);
         console.log('\n💡 Run this wizard again with your JSON file path for validation.\n');
     }
 
-    // Step 5: Support the project
-    printStep(5, 'Support this project');
-    const answer = await ask('Would you like to star the repo on GitHub? (y/n): ');
-    if (answer.toLowerCase().startsWith('y')) {
-        try {
-            const repo = resolveRepo(__dirname);
-
-            if (repo && repo.includes('/')) {
-                execSync(`gh api -X PUT /user/starred/${repo}`, { stdio: 'ignore' });
-                printSuccess('Thanks for your support! ⭐');
-            } else {
-                throw new Error('Could not resolve repo');
-            }
-        } catch (error) {
-            console.log('\nCould not star automatically. Please star us manually if you like:');
-            console.log('🔗 https://github.com/saurabhsharma2u/search-console-mcp');
-        }
-    } else {
-        console.log('No problem! Enjoy using Search Console MCP.');
-    }
+    console.log('Enjoy using Search Console CLI.');
 
     rl.close();
 }

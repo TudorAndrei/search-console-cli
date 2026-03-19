@@ -1,4 +1,4 @@
-# Google Search Console MCP Server - Roadmap
+# Google Search Console CLI - Roadmap
 
 This document outlines the planned features and improvements for this project.
 
@@ -10,11 +10,11 @@ This document outlines the planned features and improvements for this project.
 - Search Analytics queries with filtering
 - Performance summary with metrics
 - URL inspection
-- MCP resources and prompts
+- CLI resources and prompts
 - Error handling with user-friendly messages
 
 ### v1.1.0 - Documentation Resources
-- Embedded documentation as MCP resources
+- Embedded documentation for CLI users and agents
 - Dimensions reference (`docs://dimensions`)
 - Filters reference (`docs://filters`)
 - Search types reference (`docs://search-types`)

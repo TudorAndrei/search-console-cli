@@ -1,6 +1,6 @@
 ---
 title: "Generic Agent Prompts"
-description: "Universal prompts for any MCP-compatible agent."
+description: "Universal prompts for any AI agent."
 ---
 
 If you are building your own agent or using a client not listed here, these prompts follow a "tool-first" structure that works across most LLMs.

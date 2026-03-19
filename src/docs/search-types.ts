@@ -1,7 +1,7 @@
 /**
  * Google Search Console - Search Types Reference
  * 
- * This documentation is exposed as an MCP resource for AI agents.
+ * This documentation is exposed for CLI and agent workflows.
  */
 
 export const searchTypesDocs = `# Google Search Console - Search Types Reference

@@ -3,7 +3,7 @@ title: "Authentication"
 description: "Setting up Google Cloud credentials for Search Console."
 ---
 
-To use this MCP server, you must authenticate with the Google Search Console API. We use **Service Accounts** because they provide the most reliable "headless" access for AI agents.
+To use this CLI, you must authenticate with the Google Search Console API. We use **Service Accounts** because they provide the most reliable "headless" access for automation and AI agents.
 
 ## 1. Create a Service Account
 
@@ -43,5 +43,5 @@ Finally, you must give your Service Account permission to see your data:
 6.  Click **Add**.
 
 <Note>
- It can take a few minutes for the permissions to propagate. If the MCP server returns "Permission denied," wait 5 minutes and try again.
+  It can take a few minutes for the permissions to propagate. If the CLI returns "Permission denied," wait 5 minutes and try again.
 </Note>

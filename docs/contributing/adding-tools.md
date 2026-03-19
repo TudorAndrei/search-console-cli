@@ -8,7 +8,7 @@ We welcome contributions of new SEO intelligence tools. To maintain the quality 
 ## Where to add logic
 
 1.  **Core Logic:** Add your calculation logic to `src/tools/analytics.ts` or a new file in `src/tools/`.
-2.  **Tool Registration:** Register the MCP tool in `src/index.ts`.
+2.  **Command Registration:** Register the command in `src/index.ts`.
 3.  **Schemas:** Use **Zod** to define strict input schemas for your tool.
 
 ## Guidelines for Intelligence Tools

@@ -1,9 +1,9 @@
 ---
-title: "MCP and SEO"
-description: "How the Model Context Protocol changes SEO analysis."
+title: "Agentic SEO"
+description: "How deterministic tooling changes SEO analysis."
 ---
 
-Traditional SEO tools are built for humans: dashboards, charts, and spreadsheets. **Model Context Protocol (MCP)** tools are built for agents.
+Traditional SEO tools are built for humans: dashboards, charts, and spreadsheets. Deterministic CLI tools are built for agents.
 
 ## The Semantic Gap
 
@@ -14,8 +14,8 @@ In traditional analysis:
 
 In Agentic SEO:
 1.  The agent asks for a specific insight (e.g., "detect anomalies").
-2.  The MCP server runs a mathematical check (Z-score, standard deviation).
-3.  The server returns a structured report.
+2.  The CLI runs a mathematical check (Z-score, standard deviation).
+3.  The command returns a structured report.
 4.  The agent reasons about the *why* based on the *what*.
 
 ## Why it Matters
@@ -24,10 +24,10 @@ In Agentic SEO:
 A human can't manually check for keyword cannibalization across 10,000 pages every day. An agent with a `detect_cannibalization` tool can do it in seconds.
 
 ### 2. Reducing Hallucinations
-When an LLM performs math, it's prone to errors. By offloading calculation to the MCP server (written in TypeScript), we ensure the agent is reasoning with 100% accurate metrics.
+When an LLM performs math, it's prone to errors. By offloading calculation to the CLI (written in TypeScript), we ensure the agent is reasoning with accurate metrics.
 
 ### 3. State-of-the-Art Intelligence
-Our MCP server doesn't just pass strings; it implements SEO primitives like:
+This project doesn't just pass strings; it implements SEO primitives like:
 *   **Ranking Buckets:** Categorizing results into 'Top 3', 'Page 1', etc.
 *   **Traffic Deltas:** Calculating whether a change is statistically significant.
 *   **Opportunity Scoring:** Estimating potential clicks based on impression volume.

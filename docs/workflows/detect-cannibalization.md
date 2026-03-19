@@ -29,8 +29,8 @@ The agent analyzes the intent of both pages to suggest a fix.
 *   If both are similar blog posts: "Consolidate Page B into Page A and set up a 301 redirect."
 
 ## Example Outcome:
-> "Query: **'mcp vs rest api'**
+> "Query: **'graphql vs rest api'**
 > * **Conflict Score:** 0.85
-> * **Pages:** `/blog/mcp-overview` and `/documentation/protocol-comparison`
+> * **Pages:** `/blog/api-overview` and `/documentation/protocol-comparison`
 > * **Finding:** Both pages are ranking at positions 4 and 5. This is likely splitting your click-through rate.
 > * **Recommendation:** Move the technical comparison from the blog post into the documentation page, and redirect the blog post to the documentation."
